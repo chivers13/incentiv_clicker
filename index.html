@@ -129,7 +129,6 @@
             display: none;
         }
 
-        /* Анимация +1 TCENT */
         .click-effect {
             position: absolute;
             pointer-events: none;
@@ -150,6 +149,13 @@
                 transform: translateY(-50px) scale(1.2);
             }
         }
+
+        .cps-hint {
+            font-size: 0.9rem;
+            color: #95a5a6;
+            margin-top: 5px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -164,11 +170,12 @@
     <div class="stats">
         <div class="timer">Время: <span id="time">10</span> сек</div>
         <div class="counter">TCENT: <span id="score">0</span></div>
-        <div class="cps-display">TCENT/сек: <span id="cps">0.00</span></div>
+        <div class="cps-display">Средний доход: <span id="cps">0.00</span> TCENT/сек</div>
+        <div class="cps-hint" id="cps-hint">Кликай быстро — и увидишь свой доход!</div>
     </div>
 
     <div class="logo-container" id="click-area">
-        <!-- Используем I3.png -->
+        <!-- Замените ВАШ_ID_I3 на настоящий ID файла I3.png -->
         <img src="https://i.ibb.co/k61Lrpxd/I3.png" alt="Логотип">
     </div>
 
@@ -180,19 +187,20 @@
     <div class="result" id="result"></div>
 
     <script>
-        // Настройки
         let selectedTime = 10;
         let score = 0;
         let timeLeft = selectedTime;
         let gameActive = false;
         let timer = null;
         let clickHistory = [];
+        let hasClicked = false;
+        let finalCPS = 0;
 
-        // DOM
         const clickArea = document.getElementById('click-area');
         const scoreDisplay = document.getElementById('score');
         const timeDisplay = document.getElementById('time');
         const cpsDisplay = document.getElementById('cps');
+        const cpsHint = document.getElementById('cps-hint');
         const startBtn = document.getElementById('start-btn');
         const restartBtn = document.getElementById('restart-btn');
         const resultDisplay = document.getElementById('result');
@@ -209,7 +217,7 @@
             });
         });
 
-        // Создание эффекта +1 TCENT
+        // Эффект +1 TCENT
         function createClickEffect(x, y) {
             const effect = document.createElement('div');
             effect.className = 'click-effect';
@@ -217,78 +225,74 @@
             effect.style.left = (x - 50) + 'px';
             effect.style.top = (y - 20) + 'px';
             document.body.appendChild(effect);
-
-            // Удалить после анимации
-            setTimeout(() => {
-                effect.remove();
-            }, 1000);
+            setTimeout(() => effect.remove(), 1000);
         }
 
-        // Клик по логотипу
+        // Клик
         clickArea.addEventListener('click', (e) => {
             if (!gameActive) return;
-
-            // Обновление счётчика
             const now = Date.now();
             score++;
             scoreDisplay.textContent = score;
             clickHistory.push(now);
+            hasClicked = true;
 
-            // Эффект +1 TCENT
+            if (hasClicked && cpsHint.style.display === 'none') {
+                cpsHint.style.display = 'block';
+                setTimeout(() => cpsHint.style.display = 'none', 3000);
+            }
+
             createClickEffect(e.clientX, e.clientY);
         });
 
-        // CPS
+        // Расчёт CPS (за последние 5 сек)
         function calculateCPS() {
-            if (clickHistory.length === 0) return 0; // если не было кликов — 0
-            const now = gameActive ? Date.now() : (Date.now() - 1000); // если игра закончена — используем "время окончания"
+            if (clickHistory.length === 0) return 0;
+            const now = Date.now();
             const fiveSecAgo = now - 5000;
             const relevantClicks = clickHistory.filter(t => t >= fiveSecAgo);
             return parseFloat((relevantClicks.length / 5).toFixed(2));
-}
-        setInterval(() => {
-            if (gameActive) {
-                cpsDisplay.textContent = calculateCPS();
-            }
-        }, 1000);
+        }
 
-        // Старт
+        // Старт игры
         function startGame() {
             score = 0;
             timeLeft = selectedTime;
             gameActive = true;
             clickHistory = [];
+            hasClicked = false;
+            finalCPS = 0;
             resultDisplay.style.display = 'none';
             scoreDisplay.textContent = score;
             timeDisplay.textContent = timeLeft;
             cpsDisplay.textContent = '0.00';
+            cpsHint.style.display = 'none';
             startBtn.disabled = true;
             restartBtn.style.display = 'inline-block';
 
             clearInterval(timer);
             timer = setInterval(() => {
+                // Обновляем CPS КАЖДУЮ секунду во время игры
+                finalCPS = calculateCPS();
+                cpsDisplay.textContent = finalCPS;
+
                 timeLeft--;
                 timeDisplay.textContent = timeLeft;
+
                 if (timeLeft <= 0) {
                     endGame();
                 }
             }, 1000);
         }
 
-        // Завершение игры
+        // Завершение
         function endGame() {
-    // Сначала считаем CPS, пока gameActive ещё true
-            const finalCPS = calculateCPS();
-    
-            // Теперь выключаем игру
             gameActive = false;
             clearInterval(timer);
             startBtn.disabled = false;
-    
-    // Отображаем результат с правильным CPS
             resultDisplay.textContent = `Заработано: ${score} TCENT! Средний доход: ${finalCPS} TCENT/сек`;
             resultDisplay.style.display = 'block';
-}
+        }
 
         // Перезапуск
         function restartGame() {
@@ -296,10 +300,9 @@
             startGame();
         }
 
-        // Кнопки
+        // Привязка кнопок
         startBtn.addEventListener('click', startGame);
         restartBtn.addEventListener('click', restartGame);
     </script>
 </body>
 </html>
-
