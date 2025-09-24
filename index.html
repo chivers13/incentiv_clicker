@@ -240,13 +240,12 @@
 
         // CPS
         function calculateCPS() {
-            if (!gameActive) return 0;
-            const now = Date.now();
+            if (clickHistory.length === 0) return 0; // если не было кликов — 0
+            const now = gameActive ? Date.now() : (Date.now() - 1000); // если игра закончена — используем "время окончания"
             const fiveSecAgo = now - 5000;
-            clickHistory = clickHistory.filter(t => t >= fiveSecAgo);
-            return parseFloat((clickHistory.length / 5).toFixed(2));
-        }
-
+            const relevantClicks = clickHistory.filter(t => t >= fiveSecAgo);
+            return parseFloat((relevantClicks.length / 5).toFixed(2));
+}
         setInterval(() => {
             if (gameActive) {
                 cpsDisplay.textContent = calculateCPS();
@@ -276,15 +275,20 @@
             }, 1000);
         }
 
-        // Конец игры
+        // Завершение игры
         function endGame() {
+    // Сначала считаем CPS, пока gameActive ещё true
+            const finalCPS = calculateCPS();
+    
+            // Теперь выключаем игру
             gameActive = false;
             clearInterval(timer);
             startBtn.disabled = false;
-            const finalCPS = calculateCPS();
+    
+    // Отображаем результат с правильным CPS
             resultDisplay.textContent = `Заработано: ${score} TCENT! Средний доход: ${finalCPS} TCENT/сек`;
             resultDisplay.style.display = 'block';
-        }
+}
 
         // Перезапуск
         function restartGame() {
@@ -298,3 +302,4 @@
     </script>
 </body>
 </html>
+
