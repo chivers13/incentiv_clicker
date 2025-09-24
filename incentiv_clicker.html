@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCENT Кликер</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f9f9f9;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        h1 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .mode-selector {
+            margin: 15px 0;
+        }
+
+        .mode-btn {
+            padding: 8px 16px;
+            margin: 0 6px;
+            font-size: 1rem;
+            background: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #7f8c8d;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: #3498db;
+            border-color: #2980b9;
+            color: white;
+        }
+
+        .stats {
+            margin: 12px 0;
+        }
+
+        .counter, .cps-display, .timer {
+            font-size: 1.4rem;
+            margin: 6px 0;
+            font-weight: 600;
+        }
+
+        .counter { color: #2980b9; }
+        .cps-display { color: #8e44ad; }
+        .timer { color: #e74c3c; }
+
+        .logo-container {
+            cursor: pointer;
+            margin: 20px;
+            transition: transform 0.1s ease;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo-container:hover {
+            transform: scale(1.03);
+        }
+
+        .logo-container:active {
+            transform: scale(0.98);
+        }
+
+        img {
+            width: 200px;
+            height: auto;
+            display: block;
+        }
+
+        .controls {
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 16px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0 8px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        #start-btn {
+            background: #2ecc71;
+            color: white;
+        }
+
+        #restart-btn {
+            background: #f39c12;
+            color: white;
+            display: none;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            font-size: 1.5rem;
+            color: #27ae60;
+            margin-top: 20px;
+            font-weight: bold;
+            display: none;
+        }
+
+        /* Анимация +1 TCENT */
+        .click-effect {
+            position: absolute;
+            pointer-events: none;
+            font-weight: bold;
+            color: #27ae60;
+            font-size: 1.2rem;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            animation: floatUp 1s forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-50px) scale(1.2);
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>TCENT Кликер</h1>
+
+    <div class="mode-selector">
+        <button class="mode-btn active" data-time="10">10 сек</button>
+        <button class="mode-btn" data-time="30">30 сек</button>
+        <button class="mode-btn" data-time="60">60 сек</button>
+    </div>
+
+    <div class="stats">
+        <div class="timer">Время: <span id="time">10</span> сек</div>
+        <div class="counter">TCENT: <span id="score">0</span></div>
+        <div class="cps-display">TCENT/сек: <span id="cps">0.00</span></div>
+    </div>
+
+    <div class="logo-container" id="click-area">
+        <!-- Используем I3.png -->
+        <img src="https://i.ibb.co/k61Lrpxd/I3.png" alt="Логотип">
+    </div>
+
+    <div class="controls">
+        <button id="start-btn">Начать игру</button>
+        <button id="restart-btn">Перезапустить</button>
+    </div>
+
+    <div class="result" id="result"></div>
+
+    <script>
+        // Настройки
+        let selectedTime = 10;
+        let score = 0;
+        let timeLeft = selectedTime;
+        let gameActive = false;
+        let timer = null;
+        let clickHistory = [];
+
+        // DOM
+        const clickArea = document.getElementById('click-area');
+        const scoreDisplay = document.getElementById('score');
+        const timeDisplay = document.getElementById('time');
+        const cpsDisplay = document.getElementById('cps');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const resultDisplay = document.getElementById('result');
+        const modeButtons = document.querySelectorAll('.mode-btn');
+
+        // Выбор режима
+        modeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (gameActive) return;
+                modeButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedTime = parseInt(btn.dataset.time);
+                timeDisplay.textContent = selectedTime;
+            });
+        });
+
+        // Создание эффекта +1 TCENT
+        function createClickEffect(x, y) {
+            const effect = document.createElement('div');
+            effect.className = 'click-effect';
+            effect.textContent = '+1 TCENT';
+            effect.style.left = (x - 50) + 'px';
+            effect.style.top = (y - 20) + 'px';
+            document.body.appendChild(effect);
+
+            // Удалить после анимации
+            setTimeout(() => {
+                effect.remove();
+            }, 1000);
+        }
+
+        // Клик по логотипу
+        clickArea.addEventListener('click', (e) => {
+            if (!gameActive) return;
+
+            // Обновление счётчика
+            const now = Date.now();
+            score++;
+            scoreDisplay.textContent = score;
+            clickHistory.push(now);
+
+            // Эффект +1 TCENT
+            createClickEffect(e.clientX, e.clientY);
+        });
+
+        // CPS
+        function calculateCPS() {
+            if (!gameActive) return 0;
+            const now = Date.now();
+            const fiveSecAgo = now - 5000;
+            clickHistory = clickHistory.filter(t => t >= fiveSecAgo);
+            return parseFloat((clickHistory.length / 5).toFixed(2));
+        }
+
+        setInterval(() => {
+            if (gameActive) {
+                cpsDisplay.textContent = calculateCPS();
+            }
+        }, 1000);
+
+        // Старт
+        function startGame() {
+            score = 0;
+            timeLeft = selectedTime;
+            gameActive = true;
+            clickHistory = [];
+            resultDisplay.style.display = 'none';
+            scoreDisplay.textContent = score;
+            timeDisplay.textContent = timeLeft;
+            cpsDisplay.textContent = '0.00';
+            startBtn.disabled = true;
+            restartBtn.style.display = 'inline-block';
+
+            clearInterval(timer);
+            timer = setInterval(() => {
+                timeLeft--;
+                timeDisplay.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // Конец игры
+        function endGame() {
+            gameActive = false;
+            clearInterval(timer);
+            startBtn.disabled = false;
+            const finalCPS = calculateCPS();
+            resultDisplay.textContent = `Заработано: ${score} TCENT! Средний доход: ${finalCPS} TCENT/сек`;
+            resultDisplay.style.display = 'block';
+        }
+
+        // Перезапуск
+        function restartGame() {
+            clearInterval(timer);
+            startGame();
+        }
+
+        // Кнопки
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', restartGame);
+    </script>
+</body>
+</html>
