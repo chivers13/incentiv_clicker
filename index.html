@@ -9,21 +9,22 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #f9f9f9;
             color: #333;
-            text-align: center;
-            padding: 20px;
             margin: 0;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            padding: 0;
             min-height: 100vh;
             overflow: hidden;
             position: relative;
         }
 
         h1 {
-            margin-bottom: 15px;
+            margin: 20px 0 10px;
             color: #2c3e50;
+            text-align: center;
+        }
+
+        .menu {
+            text-align: center;
+            transition: opacity 0.3s, visibility 0.3s;
         }
 
         .mode-selector {
@@ -52,7 +53,7 @@
             margin: 12px 0;
         }
 
-        .counter, .cps-display, .timer {
+        .counter, .cps-display {
             font-size: 1.4rem;
             margin: 6px 0;
             font-weight: 600;
@@ -60,15 +61,31 @@
 
         .counter { color: #2980b9; }
         .cps-display { color: #8e44ad; }
-        .timer { color: #e74c3c; }
+
+        #floating-timer {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #e74c3c;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 6px 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            z-index: 20;
+            display: none;
+        }
 
         .logo-container {
             cursor: pointer;
-            margin: 20px;
+            margin: 0;
             transition: transform 0.1s ease;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            /* Центрируем при загрузке */
         }
 
         .logo-container:hover {
@@ -127,6 +144,7 @@
             margin-top: 20px;
             font-weight: bold;
             display: none;
+            text-align: center;
         }
 
         .click-effect {
@@ -137,6 +155,7 @@
             font-size: 1.2rem;
             text-shadow: 0 1px 2px rgba(0,0,0,0.3);
             animation: floatUp 1s forwards;
+            z-index: 5;
         }
 
         @keyframes floatUp {
@@ -159,29 +178,30 @@
     </style>
 </head>
 <body>
-    <h1>TCENT Кликер</h1>
+    <h1 id="title">TCENT Кликер</h1>
 
-    <div class="mode-selector">
-        <button class="mode-btn active" data-time="10">10 сек</button>
-        <button class="mode-btn" data-time="30">30 сек</button>
-        <button class="mode-btn" data-time="60">60 сек</button>
+    <div class="menu" id="menu">
+        <div class="mode-selector">
+            <button class="mode-btn active" data-time="10">10 сек</button>
+            <button class="mode-btn" data-time="30">30 сек</button>
+            <button class="mode-btn" data-time="60">60 сек</button>
+        </div>
+
+        <div class="stats">
+            <div class="counter">TCENT: <span id="score">0</span></div>
+            <div class="cps-display">Средний доход: <span id="cps">0.00</span> TCENT/сек</div>
+        </div>
+
+        <div class="controls">
+            <button id="start-btn">Начать игру</button>
+            <button id="restart-btn">Перезапустить</button>
+        </div>
     </div>
 
-    <div class="stats">
-        <div class="timer">Время: <span id="time">10</span> сек</div>
-        <div class="counter">TCENT: <span id="score">0</span></div>
-        <div class="cps-display">Средний доход: <span id="cps">0.00</span> TCENT/сек</div>
-        <div class="cps-hint" id="cps-hint">Кликай быстро — и увидишь свой доход!</div>
-    </div>
+    <div id="floating-timer">Время: <span id="floating-time">10</span> сек</div>
 
     <div class="logo-container" id="click-area">
-        <!-- Замените ВАШ_ID_I3 на настоящий ID файла I3.png -->
         <img src="https://i.ibb.co/k61Lrpxd/I3.png" alt="Логотип">
-    </div>
-
-    <div class="controls">
-        <button id="start-btn">Начать игру</button>
-        <button id="restart-btn">Перезапустить</button>
     </div>
 
     <div class="result" id="result"></div>
@@ -192,19 +212,47 @@
         let timeLeft = selectedTime;
         let gameActive = false;
         let timer = null;
+        let moveInterval = null;
         let clickHistory = [];
         let hasClicked = false;
         let finalCPS = 0;
 
+        const title = document.getElementById('title');
+        const menu = document.getElementById('menu');
+        const floatingTimer = document.getElementById('floating-timer');
+        const floatingTimeDisplay = document.getElementById('floating-time');
         const clickArea = document.getElementById('click-area');
         const scoreDisplay = document.getElementById('score');
-        const timeDisplay = document.getElementById('time');
         const cpsDisplay = document.getElementById('cps');
         const cpsHint = document.getElementById('cps-hint');
         const startBtn = document.getElementById('start-btn');
         const restartBtn = document.getElementById('restart-btn');
         const resultDisplay = document.getElementById('result');
         const modeButtons = document.querySelectorAll('.mode-btn');
+
+        
+        function centerLogo() {
+            const container = document.getElementById('click-area');
+            const rect = container.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+
+            const x = (window.innerWidth - width) / 2;
+            const y = (window.innerHeight - height) / 2;
+
+            container.style.left = x + 'px';
+            container.style.top = y + 'px';
+        }
+
+        
+        window.addEventListener('load', centerLogo);
+
+        )
+        window.addEventListener('resize', () => {
+            if (!gameActive) {
+                centerLogo();
+            }
+        });
 
         // Выбор режима
         modeButtons.forEach(btn => {
@@ -213,7 +261,7 @@
                 modeButtons.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 selectedTime = parseInt(btn.dataset.time);
-                timeDisplay.textContent = selectedTime;
+                floatingTimeDisplay.textContent = selectedTime;
             });
         });
 
@@ -245,13 +293,30 @@
             createClickEffect(e.clientX, e.clientY);
         });
 
-        // Расчёт CPS (за последние 5 сек)
+        // Расчёт CPS
         function calculateCPS() {
             if (clickHistory.length === 0) return 0;
             const now = Date.now();
             const fiveSecAgo = now - 5000;
             const relevantClicks = clickHistory.filter(t => t >= fiveSecAgo);
             return parseFloat((relevantClicks.length / 5).toFixed(2));
+        }
+
+        // Перемещение логотипа
+        function moveLogoRandomly() {
+            const container = document.getElementById('click-area');
+            const rect = container.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+
+            const maxX = window.innerWidth - width;
+            const maxY = window.innerHeight - height;
+
+            const x = Math.max(0, Math.floor(Math.random() * maxX));
+            const y = Math.max(0, Math.floor(Math.random() * maxY));
+
+            container.style.left = x + 'px';
+            container.style.top = y + 'px';
         }
 
         // Старт игры
@@ -264,20 +329,37 @@
             finalCPS = 0;
             resultDisplay.style.display = 'none';
             scoreDisplay.textContent = score;
-            timeDisplay.textContent = timeLeft;
             cpsDisplay.textContent = '0.00';
             cpsHint.style.display = 'none';
             startBtn.disabled = true;
             restartBtn.style.display = 'inline-block';
 
+            // Скрыть заголовок и меню
+            title.style.opacity = '0';
+            title.style.visibility = 'hidden';
+            menu.style.opacity = '0';
+            menu.style.visibility = 'hidden';
+
+            
+            floatingTimer.style.display = 'block';
+            floatingTimeDisplay.textContent = timeLeft;
+
+            
+            if (moveInterval) clearInterval(moveInterval);
+
+            
+            centerLogo();
+
+            // Первое перемещение через 3 секунды
+            moveInterval = setInterval(moveLogoRandomly, 3000);
+
             clearInterval(timer);
             timer = setInterval(() => {
-                // Обновляем CPS КАЖДУЮ секунду во время игры
                 finalCPS = calculateCPS();
                 cpsDisplay.textContent = finalCPS;
 
                 timeLeft--;
-                timeDisplay.textContent = timeLeft;
+                floatingTimeDisplay.textContent = timeLeft;
 
                 if (timeLeft <= 0) {
                     endGame();
@@ -285,22 +367,37 @@
             }, 1000);
         }
 
-        // Завершение
+        // Завершение игры
         function endGame() {
             gameActive = false;
             clearInterval(timer);
+            if (moveInterval) {
+                clearInterval(moveInterval);
+                moveInterval = null;
+            }
             startBtn.disabled = false;
             resultDisplay.textContent = `Заработано: ${score} TCENT! Средний доход: ${finalCPS} TCENT/сек`;
             resultDisplay.style.display = 'block';
+
+            // Скрыть плавающий таймер
+            floatingTimer.style.display = 'none';
+
+            // Показать заголовок и меню
+            title.style.opacity = '1';
+            title.style.visibility = 'visible';
+            menu.style.opacity = '1';
+            menu.style.visibility = 'visible';
+
+            // Центрируем логотип обратно
+            centerLogo();
         }
 
         // Перезапуск
         function restartGame() {
-            clearInterval(timer);
-            startGame();
+            endGame();
+            setTimeout(startGame, 100);
         }
 
-        // Привязка кнопок
         startBtn.addEventListener('click', startGame);
         restartBtn.addEventListener('click', restartGame);
     </script>
