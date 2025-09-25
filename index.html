@@ -207,6 +207,7 @@
         <div class="stats">
             <div class="counter" data-key="scoreLabel">TCENT: <span id="score">0</span></div>
             <div class="cps-display" data-key="cpsLabel">Средний доход: <span id="cps">0.00</span> TCENT/сек</div>
+            <div class="cps-hint" id="cps-hint" data-key="hint">Кликай быстро — и увидишь свой доход!</div>
         </div>
 
         <div class="controls">
@@ -302,7 +303,8 @@
                 btn.textContent = translations[lang][`mode${modes[i]}`];
             });
 
-            
+            // Если игра не активна, обновляем таймер в меню (если бы он был)
+            // В нашем случае таймер только плавающий, но значение в span остаётся числом
         }
 
         // === Центрирование логотипа ===
@@ -333,7 +335,7 @@
             setLanguage(newLang);
         });
 
-        
+        // === Остальная логика игры (без изменений в тексте — он обновляется через setLanguage) ===
         let selectedTime = 10;
         let score = 0;
         let timeLeft = selectedTime;
