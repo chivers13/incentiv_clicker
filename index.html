@@ -190,6 +190,7 @@
         <div class="stats">
             <div class="counter">TCENT: <span id="score">0</span></div>
             <div class="cps-display">Средний доход: <span id="cps">0.00</span> TCENT/сек</div>
+            <div class="cps-hint" id="cps-hint">Кликай быстро — и увидишь свой доход!</div>
         </div>
 
         <div class="controls">
@@ -230,7 +231,7 @@
         const resultDisplay = document.getElementById('result');
         const modeButtons = document.querySelectorAll('.mode-btn');
 
-        
+        // Функция центрирования логотипа
         function centerLogo() {
             const container = document.getElementById('click-area');
             const rect = container.getBoundingClientRect();
@@ -244,10 +245,10 @@
             container.style.top = y + 'px';
         }
 
-        
+        // Центрируем логотип при загрузке страницы
         window.addEventListener('load', centerLogo);
 
-        )
+        // При изменении размера окна — тоже центрируем (если не в игре)
         window.addEventListener('resize', () => {
             if (!gameActive) {
                 centerLogo();
@@ -340,14 +341,14 @@
             menu.style.opacity = '0';
             menu.style.visibility = 'hidden';
 
-            
+            // Показать плавающий таймер
             floatingTimer.style.display = 'block';
             floatingTimeDisplay.textContent = timeLeft;
 
-            
+            // Очистка интервалов
             if (moveInterval) clearInterval(moveInterval);
 
-            
+            // Центрируем перед началом движения (на случай перезапуска)
             centerLogo();
 
             // Первое перемещение через 3 секунды
