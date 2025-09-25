@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TCENT Кликер</title>
+    <title>TCENT Clicker</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -14,6 +14,21 @@
             min-height: 100vh;
             overflow: hidden;
             position: relative;
+        }
+
+        /* Кнопка смены языка */
+        #lang-toggle {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: #34495e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            z-index: 30;
         }
 
         h1 {
@@ -85,7 +100,6 @@
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             position: absolute;
-            /* Центрируем при загрузке */
         }
 
         .logo-container:hover {
@@ -178,6 +192,9 @@
     </style>
 </head>
 <body>
+    <!-- Кнопка смены языка -->
+    <button id="lang-toggle">RU</button>
+
     <h1 id="title">TCENT Кликер</h1>
 
     <div class="menu" id="menu">
@@ -188,36 +205,63 @@
         </div>
 
         <div class="stats">
-            <div class="counter">TCENT: <span id="score">0</span></div>
-            <div class="cps-display">Средний доход: <span id="cps">0.00</span> TCENT/сек</div>
-            <div class="cps-hint" id="cps-hint">Кликай быстро — и увидишь свой доход!</div>
+            <div class="counter" data-key="scoreLabel">TCENT: <span id="score">0</span></div>
+            <div class="cps-display" data-key="cpsLabel">Средний доход: <span id="cps">0.00</span> TCENT/сек</div>
         </div>
 
         <div class="controls">
-            <button id="start-btn">Начать игру</button>
-            <button id="restart-btn">Перезапустить</button>
+            <button id="start-btn" data-key="startBtn">Начать игру</button>
+            <button id="restart-btn" data-key="restartBtn">Перезапустить</button>
         </div>
     </div>
 
-    <div id="floating-timer">Время: <span id="floating-time">10</span> сек</div>
+    <div id="floating-timer" data-key="timerLabel">Время: <span id="floating-time">10</span> сек</div>
 
     <div class="logo-container" id="click-area">
-        <img src="https://i.ibb.co/k61Lrpxd/I3.png" alt="Логотип">
+        <img src="https://i.ibb.co/k61Lrpxd/I3.png" alt="Logo">
     </div>
 
     <div class="result" id="result"></div>
 
     <script>
-        let selectedTime = 10;
-        let score = 0;
-        let timeLeft = selectedTime;
-        let gameActive = false;
-        let timer = null;
-        let moveInterval = null;
-        let clickHistory = [];
-        let hasClicked = false;
-        let finalCPS = 0;
+        // === Переводы ===
+        const translations = {
+            ru: {
+                title: "TCENT Кликер",
+                startBtn: "Начать игру",
+                restartBtn: "Перезапустить",
+                scoreLabel: "TCENT:",
+                cpsLabel: "Средний доход:",
+                hint: "Кликай быстро — и увидишь свой доход!",
+                timerLabel: "Время:",
+                result: "Заработано: {score} TCENT! Средний доход: {cps} TCENT/сек",
+                mode10: "10 сек",
+                mode30: "30 сек",
+                mode60: "60 сек",
+                langToggle: "EN"
+            },
+            en: {
+                title: "TCENT Clicker",
+                startBtn: "Start Game",
+                restartBtn: "Restart",
+                scoreLabel: "TCENT:",
+                cpsLabel: "Avg. Income:",
+                hint: "Click fast — and see your income!",
+                timerLabel: "Time:",
+                result: "Earned: {score} TCENT! Avg. Income: {cps} TCENT/sec",
+                mode10: "10 sec",
+                mode30: "30 sec",
+                mode60: "60 sec",
+                langToggle: "RU"
+            }
+        };
 
+        // Текущий язык
+        let currentLang = localStorage.getItem('tcLang') || 'ru';
+        if (!['ru', 'en'].includes(currentLang)) currentLang = 'ru';
+
+        // DOM элементы
+        const langToggle = document.getElementById('lang-toggle');
         const title = document.getElementById('title');
         const menu = document.getElementById('menu');
         const floatingTimer = document.getElementById('floating-timer');
@@ -231,29 +275,74 @@
         const resultDisplay = document.getElementById('result');
         const modeButtons = document.querySelectorAll('.mode-btn');
 
-        // Функция центрирования логотипа
+        // === Функция установки языка ===
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('tcLang', lang);
+            const t = translations[lang];
+
+            // Обновляем текст
+            document.title = t.title;
+            title.textContent = t.title;
+            startBtn.textContent = t.startBtn;
+            restartBtn.textContent = t.restartBtn;
+            langToggle.textContent = t.langToggle;
+
+            // Статистика
+            document.querySelector('.counter').childNodes[0].textContent = t.scoreLabel + ' ';
+            document.querySelector('.cps-display').childNodes[0].textContent = t.cpsLabel + ' ';
+            cpsHint.textContent = t.hint;
+
+            // Плавающий таймер
+            floatingTimer.childNodes[0].textContent = t.timerLabel + ' ';
+
+            // Режимы
+            const modes = [10, 30, 60];
+            modeButtons.forEach((btn, i) => {
+                btn.textContent = translations[lang][`mode${modes[i]}`];
+            });
+
+            
+        }
+
+        // === Центрирование логотипа ===
         function centerLogo() {
             const container = document.getElementById('click-area');
             const rect = container.getBoundingClientRect();
             const width = rect.width;
             const height = rect.height;
-
             const x = (window.innerWidth - width) / 2;
             const y = (window.innerHeight - height) / 2;
-
             container.style.left = x + 'px';
             container.style.top = y + 'px';
         }
 
-        // Центрируем логотип при загрузке страницы
-        window.addEventListener('load', centerLogo);
-
-        // При изменении размера окна — тоже центрируем (если не в игре)
-        window.addEventListener('resize', () => {
-            if (!gameActive) {
-                centerLogo();
-            }
+        // === Инициализация ===
+        window.addEventListener('load', () => {
+            setLanguage(currentLang);
+            centerLogo();
         });
+
+        window.addEventListener('resize', () => {
+            if (!gameActive) centerLogo();
+        });
+
+        // Переключение языка
+        langToggle.addEventListener('click', () => {
+            const newLang = currentLang === 'ru' ? 'en' : 'ru';
+            setLanguage(newLang);
+        });
+
+        
+        let selectedTime = 10;
+        let score = 0;
+        let timeLeft = selectedTime;
+        let gameActive = false;
+        let timer = null;
+        let moveInterval = null;
+        let clickHistory = [];
+        let hasClicked = false;
+        let finalCPS = 0;
 
         // Выбор режима
         modeButtons.forEach(btn => {
@@ -277,7 +366,6 @@
             setTimeout(() => effect.remove(), 1000);
         }
 
-        // Клик
         clickArea.addEventListener('click', (e) => {
             if (!gameActive) return;
             const now = Date.now();
@@ -294,7 +382,6 @@
             createClickEffect(e.clientX, e.clientY);
         });
 
-        // Расчёт CPS
         function calculateCPS() {
             if (clickHistory.length === 0) return 0;
             const now = Date.now();
@@ -303,24 +390,19 @@
             return parseFloat((relevantClicks.length / 5).toFixed(2));
         }
 
-        // Перемещение логотипа
         function moveLogoRandomly() {
             const container = document.getElementById('click-area');
             const rect = container.getBoundingClientRect();
             const width = rect.width;
             const height = rect.height;
-
             const maxX = window.innerWidth - width;
             const maxY = window.innerHeight - height;
-
             const x = Math.max(0, Math.floor(Math.random() * maxX));
             const y = Math.max(0, Math.floor(Math.random() * maxY));
-
             container.style.left = x + 'px';
             container.style.top = y + 'px';
         }
 
-        // Старт игры
         function startGame() {
             score = 0;
             timeLeft = selectedTime;
@@ -335,40 +417,29 @@
             startBtn.disabled = true;
             restartBtn.style.display = 'inline-block';
 
-            // Скрыть заголовок и меню
             title.style.opacity = '0';
             title.style.visibility = 'hidden';
             menu.style.opacity = '0';
             menu.style.visibility = 'hidden';
 
-            // Показать плавающий таймер
             floatingTimer.style.display = 'block';
             floatingTimeDisplay.textContent = timeLeft;
 
-            // Очистка интервалов
             if (moveInterval) clearInterval(moveInterval);
 
-            // Центрируем перед началом движения (на случай перезапуска)
             centerLogo();
-
-            // Первое перемещение через 3 секунды
             moveInterval = setInterval(moveLogoRandomly, 3000);
 
             clearInterval(timer);
             timer = setInterval(() => {
                 finalCPS = calculateCPS();
                 cpsDisplay.textContent = finalCPS;
-
                 timeLeft--;
                 floatingTimeDisplay.textContent = timeLeft;
-
-                if (timeLeft <= 0) {
-                    endGame();
-                }
+                if (timeLeft <= 0) endGame();
             }, 1000);
         }
 
-        // Завершение игры
         function endGame() {
             gameActive = false;
             clearInterval(timer);
@@ -377,23 +448,23 @@
                 moveInterval = null;
             }
             startBtn.disabled = false;
-            resultDisplay.textContent = `Заработано: ${score} TCENT! Средний доход: ${finalCPS} TCENT/сек`;
+            const t = translations[currentLang];
+            const resultText = t.result
+                .replace('{score}', score)
+                .replace('{cps}', finalCPS);
+            resultDisplay.textContent = resultText;
             resultDisplay.style.display = 'block';
 
-            // Скрыть плавающий таймер
             floatingTimer.style.display = 'none';
 
-            // Показать заголовок и меню
             title.style.opacity = '1';
             title.style.visibility = 'visible';
             menu.style.opacity = '1';
             menu.style.visibility = 'visible';
 
-            // Центрируем логотип обратно
             centerLogo();
         }
 
-        // Перезапуск
         function restartGame() {
             endGame();
             setTimeout(startGame, 100);
